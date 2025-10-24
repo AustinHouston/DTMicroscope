@@ -1,51 +1,15 @@
-# tem_client.py
+# stem_client.py
+# Austin Houston
+
 import socket
 import json
 import numpy as np
 from typing import Tuple, Any
 
+from base_client import BaseProtocol
 
-class TEMClient:
-    def __init__(self, host="10.46.217.241", port=9093, timeout=30):
-        self.host = host
-        self.port = port
-        self.timeout = timeout
-        self._next_id = 1
-
-    def _to_netstring(self, obj: dict) -> bytes:
-        payload = json.dumps(obj, separators=(",", ":")).encode("utf-8")
-        return f"{len(payload)}:".encode("ascii") + payload + b","
-
-    def _recv_netstring(self, sock: socket.socket) -> dict:
-        buffer = b""
-        while not buffer.endswith(b","):
-            chunk = sock.recv(4096)
-            if not chunk:
-                break
-            buffer += chunk
-        if not buffer:
-            raise ConnectionError("No response from server")
-        try:
-            length_str, rest = buffer.split(b":", 1)
-            length = int(length_str)
-            payload = rest[:length]
-            return json.loads(payload.decode("utf-8"))
-        except Exception as e:
-            raise RuntimeError(f"Malformed response: {buffer}") from e
-
-    def _call(self, method: str, params=None) -> Any:
-        if params is None:
-            params = {}
-        msg = {"jsonrpc": "2.0", "id": self._next_id, "method": method, "params": params}
-        self._next_id += 1
-        with socket.create_connection((self.host, self.port), timeout=self.timeout) as sock:
-            sock.sendall(self._to_netstring(msg))
-            reply = self._recv_netstring(sock)
-        if "error" in reply:
-            raise RuntimeError(f"Server error: {reply['error']}")
-        return reply.get("result", None)
-
-    # convenience wrappers to mirror TEMServer API
+class STEMClient(BaseClientFactory):
+    # wrappers to mirror STEMServer API
     def get_detectors(self):
         return self._call("get_detectors")
 
@@ -96,3 +60,5 @@ class TEMClient:
 
     def close(self):
         return self._call("close")
+
+
